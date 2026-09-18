@@ -3,28 +3,39 @@ package lexer;
 import parser.Grammar;
 
 public class Lexer {
-    public String input;
-    public int inputLoc = 0;
-    char peek = ' ';
-    Token curToken;
+    public final String input;
+    private int inputLoc = 0;
+    private char peek = ' ';
+    private Token curToken;
 
     public Lexer(String input) { this.input = input; }
 
-    void readChar() { peek = input.charAt(inputLoc++); }
+    public int inputLoc() { return inputLoc; }
+
+    void readChar() {
+        if (inputLoc == input.length()) { peek = '$'; }
+        else { peek = input.charAt(inputLoc++); }
+    }
     void unread(int offset) { inputLoc-=offset; }
 
     // Consume a single token
     public Token scan() throws LexException {
+        readChar();
+        if (peek == '$') { return new Token(Grammar.Terminal.SENTINEL); }
+
         // Handle whitespace
         while (peek == ' ' || peek == '\t' || peek == '\n') { readChar(); }
+        if (peek == '$') { return new Token(Grammar.Terminal.SENTINEL); }
 
         // Try each terminal sequentially
         if (getPlus()) return curToken;
+        if (getFloat()) return curToken; // Have to do this first because we could have a unary minus
         if (getMinus()) return curToken;
         if (getExp()) return curToken;
         if (getFact()) return curToken;
+        if (getLeftParen()) return curToken;
+        if (getRightParen()) return curToken;
         if (getCos()) return curToken;
-        if (getFloat()) return curToken;
 
         throw new LexException(inputLoc);
     }
@@ -77,6 +88,7 @@ public class Lexer {
     boolean getFloat() { // This is a simulation of the transition diagram
         int state = 0;
         int charsRead = 1;
+        char firstChar = peek;
 
         float mantissa = 0.0f;
         float fractionScale = 0.1f;
@@ -84,15 +96,30 @@ public class Lexer {
         int expSign = 1;
         int expValue = 0;
 
-        while (!FLOAT_ACCEPTING_STATES[state]) { // While not accepting
+        while (true) { // While not accepting
             // Transition
             int charTransition = getCharTransition(peek);
-            state = FLOAT_TRANSITION_TABLE[state][charTransition];
-
-            if (state == -1) { // INVALID state reached
-                unread((charsRead));
-                return false;
+            if (charTransition == -1) { // Invalid character
+                if (FLOAT_ACCEPTING_STATES[state]) { break; } // We have a correct float
+                else { // Not a valid float
+                    unread(charsRead - 1);
+                    peek = firstChar;
+                    return false;
+                }
             }
+
+            int nextState = FLOAT_TRANSITION_TABLE[state][charTransition];
+
+            if (nextState == -1) { // INVALID state reached
+                if (FLOAT_ACCEPTING_STATES[state]) { break; } // We have a correct float
+                else { // Not a valid float
+                    unread(charsRead - 1);
+                    peek = firstChar;
+                    return false;
+                }
+            }
+
+            state = nextState;
 
             // Augment float value
             switch (state) {
@@ -130,24 +157,27 @@ public class Lexer {
         }
 
         // We are in an accepting state
-        float val = mantissaSign * mantissa + ((float)Math.pow(10.0, (double)(expSign * expValue)));
-        curToken = new Float(val);
+        // A non-EOF char has already been read, leave it for next scan.
+        if (peek != '$') {
+            unread(1);
+        }
+        float val = mantissaSign * mantissa * ((float)Math.pow(10.0, (double)(expSign * expValue)));
+        curToken = new FloatToken(val);
         return true;
     }
 
     boolean getCos() {
         if (peek != 'c') {
-            unread(1);
             return false;
         }
         readChar();
         if (peek != 'o') {
-            unread(2);
+            unread(1);
             return false;
         }
         readChar();
         if (peek != 's'){
-            unread(3);
+            unread(2);
             return false;
         }
         curToken = new Token(Grammar.Terminal.COS);
@@ -159,7 +189,6 @@ public class Lexer {
             curToken = new Token(Grammar.Terminal.PLUS);
             return true;
         }
-        unread(1);
         return false;
     }
     boolean getMinus() {
@@ -167,7 +196,6 @@ public class Lexer {
             curToken = new Token(Grammar.Terminal.MINUS);
             return true;
         }
-        unread(1);
         return false;
     }
     boolean getExp() {
@@ -175,7 +203,6 @@ public class Lexer {
             curToken = new Token(Grammar.Terminal.EXP);
             return true;
         }
-        unread(1);
         return false;
     }
     boolean getFact() {
@@ -183,7 +210,22 @@ public class Lexer {
             curToken = new Token(Grammar.Terminal.FACT);
             return true;
         }
-        unread(1);
+        return false;
+    }
+
+    boolean getLeftParen() {
+        if (peek == '(') {
+            curToken = new Token(Grammar.Terminal.LEFT_PAREN);
+            return true;
+        }
+        return false;
+    }
+
+    boolean getRightParen() {
+        if (peek == ')') {
+            curToken = new Token(Grammar.Terminal.RIGHT_PAREN);
+            return true;
+        }
         return false;
     }
 }

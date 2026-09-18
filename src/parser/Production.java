@@ -8,16 +8,20 @@ import java.util.Objects;
 public final class Production implements Comparable<Production> {
     public final Grammar.NonTerminal head;
     private final List<Grammar.Symbol> body;
+    private final SemanticAction action; // Upon reduction, this needs to be called to compute the part of the expression
 
-    Production(Grammar.NonTerminal h, List<Grammar.Symbol> b) {
+    Production(Grammar.NonTerminal h, List<Grammar.Symbol> b, SemanticAction a) {
         head = h;
         body = List.copyOf(b); // Make a new list
+        action = a;
     }
 
     public List<Grammar.Symbol> body() { // For encapsulation
         return Collections.unmodifiableList(body);
     }
     public int bodySize() { return body.size(); }
+
+    public ParseNode applySemanticAction(List<ParseNode> nodes) { return action.action(nodes); }
 
     @Override
     public int compareTo(Production p) {

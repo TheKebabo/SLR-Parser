@@ -24,14 +24,24 @@ public class ItemSet {
     public static ItemSet closure(ItemSet I, Grammar G) {
         // Initially add every item from I, since I is a subset of closure(I)
         ItemSet res = new ItemSet();
-        for (Item i : I.items) res.addItem(i);
+        for (Item i : I.items) { res.addItem(i); }
 
         boolean itemAdded = true; // Have at least one initial loop
         while (itemAdded) { // Loop until no items added in a round
             itemAdded = false;
-            for (Item i : res.items) {
-                for (Production p : G.productions()) { // Head -> body
-                    Item newItem = new Item(p, 0); // Head -> .body
+            // We r updating res so need to iterate over old version
+            Set<Item> currentRes = Set.copyOf(res.items());
+            for (Item i : currentRes) { // A -> a . B b
+                if (i.isComplete()) { continue; }
+
+                Grammar.Symbol BSym = i.getNext();
+                if (!(BSym instanceof Grammar.NonTerminal B)) { continue; }
+
+                // We need items of the form B -> . c
+                for (Production p : G.productions()) {
+                    if (p.head != B) { continue; }
+
+                    Item newItem = new Item(p, 0);
                     if (!res.hasItem(newItem)) {
                         res.addItem(newItem);
                         itemAdded = true;
@@ -43,12 +53,12 @@ public class ItemSet {
     }
 
     // Compute the goto of an item set
-    // i.e. the closure of the set of all items A -> aX.b such that A -> a.Xb is in I
+    // i.e. the closure of the set of all items A -> a X . b such that A -> a . X b is in I
     public static ItemSet goTo(ItemSet I, Grammar.Symbol X, Grammar G) {
         ItemSet res = new ItemSet();
 
-        for (Item i : I.items()) {
-            if (!i.isComplete()) { res.addItem(i.advance()); }
+        for (Item i : I.items()) { // A -> a . Y b
+            if (!i.isComplete() && i.getNext().equals(X)) { res.addItem(i.advance()); }
         }
 
         return closure(res, G);

@@ -166,12 +166,14 @@ public final class Grammar { // Essentially a list of productions with a designa
     // For the calculation grammar (i.e. parsing)
     public enum Terminal implements Symbol {
         // Use ASCII code for single characters, else >=256 and derive toString()
-        PLUS(43), MINUS(45), EXP(94), FACT(21),
-        FLOAT(256), COS(257), SENTINEL(258);
+        PLUS(43, "+"), MINUS(45, "-"), EXP(94, "^"), FACT(21, "!"), LEFT_PAREN(40, "("), RIGHT_PAREN(41, ")"),
+        FLOAT(256, "float"), COS(257, "cos"), SENTINEL(258, "$");
 
         private final int code;
-        Terminal(int code) { this.code = code; }
-        @Override public int code() { return this.code; }
+        private final String terminal;
+        Terminal(int code, String terminal) { this.code = code; this.terminal = terminal; }
+        public int code() { return this.code; }
+        public String terminal() { return this.terminal; }
     }
     public enum NonTerminal implements Symbol {
         // A_ represents A' in the grammar

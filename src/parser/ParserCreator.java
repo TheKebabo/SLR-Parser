@@ -39,8 +39,7 @@ public class ParserCreator {
                 } // Determine shifts
                 else {
                     Grammar.Symbol symbol = I.getNext();
-                    if (symbol instanceof Grammar.Terminal) {
-                        Grammar.Terminal a = (Grammar.Terminal) symbol;
+                    if (symbol instanceof Grammar.Terminal a) {
                         ItemSet itemSet_j = ItemSet.goTo(itemSet_i, a, G); // This is alr computed in canonItemSet but oh well
                         int j = C.indexOf(itemSet_j);
                         actionTable.put(new ActionPair(i, a), new ShiftAction(j));
@@ -71,7 +70,7 @@ public class ParserCreator {
         ReduceAction(Production p) { this.prod = p; }
     }
     public static final class AcceptAction implements ActionType {}
-    public final class ErrorAction implements ActionType { // Implement error routines
+    public static final class ErrorAction implements ActionType { // TODO: Implement error routines
     }
 
     // For the 2D maps

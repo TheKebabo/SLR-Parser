@@ -13,4 +13,5 @@ public class TokenRetriever {
         for (int i = 0; i < n; ++i) tokens[i] = lex.scan();
         return tokens;
     }
+    public int getCurrentLoc() { return lex.inputLoc(); }
 }
